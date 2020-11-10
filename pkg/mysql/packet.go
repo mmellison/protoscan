@@ -57,7 +57,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 		return nil, fmt.Errorf("%w: %v", ErrPacketDecode, err)
 	}
 	if n != 3 {
-		return nil, fmt.Errorf("%w: truncated header", ErrPacketDecode)
+		return nil, fmt.Errorf("%w: truncated header, connection is not mysql", ErrPacketDecode)
 	}
 
 	length := binary.LittleEndian.Uint32(append(buf, 0))
@@ -73,7 +73,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 		return nil, fmt.Errorf("%w: %v", ErrPacketDecode, err)
 	}
 	if n != 1 {
-		return nil, fmt.Errorf("%w: truncated header", ErrPacketDecode)
+		return nil, fmt.Errorf("%w: truncated header, connection is not mysql", ErrPacketDecode)
 	}
 
 	p.SequenceID = buf[0]
@@ -89,7 +89,7 @@ func ReadPacket(r io.Reader) (*Packet, error) {
 		return nil, fmt.Errorf("%w: %v", ErrPacketDecode, err)
 	}
 	if n != int(length) {
-		return nil, fmt.Errorf("%w: truncated payload", ErrPacketDecode)
+		return nil, fmt.Errorf("%w: truncated payload, connection is not mysql", ErrPacketDecode)
 	}
 
 	p.Payload = buf
