@@ -53,7 +53,6 @@ func (*HandshakeV10) GetProtoVersion() uint8 {
 //
 // See https://dev.mysql.com/doc/internals/en/connection-phase.html
 func DecodeHandshake(payload []byte) (Handshake, error) {
-
 	// (1) Parse Handshake Version
 	//		The first byte contains the protocol wire version.
 
@@ -78,7 +77,7 @@ func DecodeHandshake(payload []byte) (Handshake, error) {
 			return nil, ErrHandshakeTruncated
 		}
 		hs.ServerVersion = string(sub)
-		pos += 1 // Add additional offset for null byte
+		pos++ // Add additional offset for null byte
 
 		// 4 Bytes: Thread ID
 
@@ -95,7 +94,7 @@ func DecodeHandshake(payload []byte) (Handshake, error) {
 			return nil, ErrHandshakeTruncated
 		}
 		hs.AuthPluginData = sub
-		pos += 1 // Add additional offset for null byte
+		pos++ // Add additional offset for null byte
 
 		// 2 Bytes: Lower Bytes of Capability Flags
 
@@ -167,8 +166,9 @@ func DecodeHandshake(payload []byte) (Handshake, error) {
 				return nil, ErrHandshakeTruncated
 			}
 			hs.AuthPluginName = string(sub)
-			pos += 1 // Add additional offset for null byte
 		}
+
+		fmt.Println(pos)
 
 		return hs, nil
 
