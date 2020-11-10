@@ -73,125 +73,130 @@ func DecodeHandshake(payload []byte) (Handshake, error) {
 	// (1) Parse Handshake Version
 	//		The first byte contains the protocol wire version.
 
-	sub, pos, err := readBuffer(payload, 0, 1)
-	if err != nil {
+	if len(payload) < 1 {
 		return nil, ErrHandshakeTruncated
 	}
 
-	version := sub[0]
+	version := payload[0]
 
 	// (2) Continue Decoding the Remaining Payload
 	//		according to the version field.
 
 	switch version {
 	case 10:
-		hs := &HandshakeV10{}
-
-		// Variable: Server Version (NULL-Terminated)
-
-		sub, pos, err = readBuffer(payload, pos, nullTermStringLen(payload[pos:]))
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.ServerVersion = string(sub)
-		pos++ // Add additional offset for null byte
-
-		// 4 Bytes: Thread ID
-
-		sub, pos, err = readBuffer(payload, pos, 4)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.ThreadID = binary.LittleEndian.Uint32(sub)
-
-		// 8 Bytes: Part 1 of Auth Scramble
-
-		sub, pos, err = readBuffer(payload, pos, 8)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.AuthPluginData = sub
-		pos++ // Add additional offset for null byte
-
-		// 2 Bytes: Lower Bytes of Capability Flags
-
-		sub, pos, err = readBuffer(payload, pos, 2)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		lowerCap := sub
-
-		// 1 Byte: Character Set ID
-
-		sub, pos, err = readBuffer(payload, pos, 1)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.CharacterSet = sub[0]
-
-		// 2 Bytes: Server Status Flags
-
-		sub, pos, err = readBuffer(payload, pos, 2)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.ServerStatusFlags = ServerStatus(binary.LittleEndian.Uint16(sub))
-
-		// 2 Bytes: Upper Byes of Capability Flags
-
-		sub, pos, err = readBuffer(payload, pos, 2)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		upperCap := sub
-		hs.CapabilityFlags = Capability(binary.LittleEndian.Uint32(append(upperCap, lowerCap...)))
-
-		// 1 Byte: Plugin Data Length
-
-		sub, pos, err = readBuffer(payload, pos, 1)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		pluginLen := sub[0]
-
-		// 10 Bytes: Reserved
-
-		pos += 10
-
-		// Variable: Remaining Plugin Data Scramble
-
-		offset := 0
-		if pluginLen > 0 {
-			offset = int(pluginLen) - 8
-			if offset > 13 {
-				offset = 13
-			}
-		}
-
-		sub, pos, err = readBuffer(payload, pos, offset)
-		if err != nil {
-			return nil, ErrHandshakeTruncated
-		}
-		hs.AuthPluginData = append(hs.AuthPluginData, sub...)
-
-		// Variable: Auth Plugin Name (NULL-Terminated)
-		//	Only present if CLIENT_PLUGIN_AUTH capability is set.
-
-		if hs.CapabilityFlags.Has(CapabilityPluginAuth) {
-			sub, pos, err = readBuffer(payload, pos, nullTermStringLen(payload[pos:]))
-			if err != nil {
-				return nil, ErrHandshakeTruncated
-			}
-			hs.AuthPluginName = string(sub)
-		}
-
-		fmt.Println(pos)
-
-		return hs, nil
+		return decodeHandshakeV10(payload)
 
 	default:
 		return nil, fmt.Errorf("%w: unsupported protocol version or not a mysql handshake", ErrHandshakeDecode)
 	}
+}
+
+// Decode v10 of the MySQL handshake payload.
+func decodeHandshakeV10(payload []byte) (*HandshakeV10, error) {
+	// Start decoding after the first byte, since the first byte contains
+	// the version which has already been processed.
+
+	hs := &HandshakeV10{}
+
+	// Variable: Server Version (NULL-Terminated)
+
+	sub, pos, err := readBuffer(payload, 1, nullTermStringLen(payload[1:]))
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.ServerVersion = string(sub)
+	pos++ // Add additional offset for null byte
+
+	// 4 Bytes: Thread ID
+
+	sub, pos, err = readBuffer(payload, pos, 4)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.ThreadID = binary.LittleEndian.Uint32(sub)
+
+	// 8 Bytes: Part 1 of Auth Scramble
+
+	sub, pos, err = readBuffer(payload, pos, 8)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.AuthPluginData = sub
+	pos++ // Add additional offset for null byte
+
+	// 2 Bytes: Lower Bytes of Capability Flags
+
+	sub, pos, err = readBuffer(payload, pos, 2)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	lowerCap := sub
+
+	// 1 Byte: Character Set ID
+
+	sub, pos, err = readBuffer(payload, pos, 1)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.CharacterSet = sub[0]
+
+	// 2 Bytes: Server Status Flags
+
+	sub, pos, err = readBuffer(payload, pos, 2)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.ServerStatusFlags = ServerStatus(binary.LittleEndian.Uint16(sub))
+
+	// 2 Bytes: Upper Byes of Capability Flags
+
+	sub, pos, err = readBuffer(payload, pos, 2)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	upperCap := sub
+	hs.CapabilityFlags = Capability(binary.LittleEndian.Uint32(append(upperCap, lowerCap...)))
+
+	// 1 Byte: Plugin Data Length
+
+	sub, pos, err = readBuffer(payload, pos, 1)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	pluginLen := sub[0]
+
+	// 10 Bytes: Reserved
+
+	pos += 10
+
+	// Variable: Remaining Plugin Data Scramble
+
+	offset := 0
+	if pluginLen > 0 {
+		offset = int(pluginLen) - 8
+		if offset > 13 {
+			offset = 13
+		}
+	}
+
+	sub, pos, err = readBuffer(payload, pos, offset)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.AuthPluginData = append(hs.AuthPluginData, sub...)
+
+	// Variable: Auth Plugin Name (NULL-Terminated)
+	//	Only present if CLIENT_PLUGIN_AUTH capability is set.
+
+	if hs.CapabilityFlags.Has(CapabilityPluginAuth) {
+		sub, _, err = readBuffer(payload, pos, nullTermStringLen(payload[pos:]))
+		if err != nil {
+			return nil, ErrHandshakeTruncated
+		}
+		hs.AuthPluginName = string(sub)
+	}
+
+	return hs, nil
 }
 
 // Parses a series of bytes for a null-terminated string (C-style string) and returns
