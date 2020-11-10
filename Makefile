@@ -45,7 +45,7 @@ lint-fix:
 #		Build Targets
 
 .SECONDEXPANSION:
-bin/%: cmd/% $$(wildcard cmd/%/**/*) $(cmd_sources) go.mod go.sum
+bin/%: cmd/% $$(wildcard cmd/%/**/*) $(pkg_sources) go.mod go.sum
 	CGO_ENABLED=0 go build -ldflags='${_LDFLAGS}' -o $@ ./$<
 
 .PHONY:
