@@ -70,6 +70,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	when := time.Now()
+
 	packet, err := mysql.ReadPacket(conn)
 	if err != nil {
 		if errors.Is(err, os.ErrDeadlineExceeded) {
@@ -93,7 +95,7 @@ func main() {
 		Handshake    mysql.Handshake `json:"handshake"`
 	}{
 		Target:       target,
-		When:         time.Now(),
+		When:         when,
 		ProtoVersion: int(hs.GetProtoVersion()),
 		Handshake:    hs,
 	}
