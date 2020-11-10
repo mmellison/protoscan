@@ -57,6 +57,7 @@ const (
 	CapabilityRememberOptions            Capability = 1 << 31
 )
 
+// Has determines if the Capability contains the given Capability flag.
 func (c Capability) Has(cap Capability) bool {
 	return (c & cap) == cap
 }

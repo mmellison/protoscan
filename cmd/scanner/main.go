@@ -16,6 +16,13 @@
 
 package main
 
+// SCANNER
+// 	Scanner connects to the given target IP and port and creates a TCP connection.
+// 	It then waits for a response from server (or times out in the event the server doesn't send anything, e.g. a web server).
+//
+//	If the server responds, the message is decoded and is attempted to be parsed as a well known type (for example a MySQL packet).
+//  The results are then printed as JSON to the STDOUT.
+
 import (
 	"context"
 	"encoding/json"
@@ -97,6 +104,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// (4) Print Results
 
 	result := struct {
 		Target       string          `json:"target"`

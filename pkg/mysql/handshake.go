@@ -31,19 +31,36 @@ type Handshake interface {
 }
 
 // HandshakeV10 represents the MySQL initial handshake packet for protocol version 10.
+// This payload is sent from the server to the client at the start of the conversation.
 //
 // See https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
 type HandshakeV10 struct {
-	ServerVersion     string       `json:"server_version"`
-	ThreadID          uint32       `json:"thread_id"`
-	AuthPluginData    []byte       `json:"auth_plugin_data"`
-	CharacterSet      uint8        `json:"character_set"`
-	CapabilityFlags   Capability   `json:"capability_flags"`
+	// ServerVersion contains the human readable server version.
+	ServerVersion string `json:"server_version"`
+
+	// ThreadID is the connection ID.
+	ThreadID uint32 `json:"thread_id"`
+
+	// AuthPluginData contains scramble data used by authentication plugins.
+	AuthPluginData []byte `json:"auth_plugin_data"`
+
+	// CharacterSet contains the server's charset id.
+	CharacterSet uint8 `json:"character_set"`
+
+	// CapabilityFlags is a composite flag field used by the client and server
+	// to communicate supported functions and features.
+	CapabilityFlags Capability `json:"capability_flags"`
+
+	// ServerStatusFlags is a composite flag field used to communicate the current
+	// status of the server.
 	ServerStatusFlags ServerStatus `json:"server_status_flags"`
 
+	// AuthPluginName is the name (if any) of the auth plugin which the authentication scramble data belongs to.
 	AuthPluginName string `json:"auth_plugin_name,omitempty"`
 }
 
+// GetProtoVersion returns the MySQL Protocol Version this Handshake implements.
+// Always 10.
 func (*HandshakeV10) GetProtoVersion() uint8 {
 	return 10
 }

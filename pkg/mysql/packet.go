@@ -39,7 +39,7 @@ type Packet struct {
 // ReadPacket attempts to read a MySQL packet from the given reader and produce
 // the packet's payload.
 func ReadPacket(r io.Reader) (*Packet, error) {
-	// Packet:
+	// Packet Format
 	//	3 Bytes: Payload Length
 	//	1 Byte: Sequence ID
 	//	PAYLOAD
