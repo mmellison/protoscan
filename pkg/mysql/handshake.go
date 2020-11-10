@@ -65,6 +65,27 @@ func (*HandshakeV10) GetProtoVersion() uint8 {
 	return 10
 }
 
+// HandshakeV9 represents the MySQL initial handshake packet for protocol version 9.
+// This payload is sent from the server to the client at the start of the conversation.
+//
+// See https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
+type HandshakeV9 struct {
+	// ServerVersion contains the human readable server version.
+	ServerVersion string `json:"server_version"`
+
+	// ThreadID is the connection ID.
+	ThreadID uint32 `json:"thread_id"`
+
+	// Scramble is the authentication data for the Old Password Authentication method.
+	Scramble []byte `json:"scramble"`
+}
+
+// GetProtoVersion returns the MySQL Protocol Version this Handshake implements.
+// Always 9.
+func (*HandshakeV9) GetProtoVersion() uint8 {
+	return 9
+}
+
 // DecodeHandshake attempts to read and decode the given series of bytes as a MySQL Handshake payload.
 // If decoding is successful, a Handshake representing the actual underlying handshake message will be returned.
 //
@@ -83,12 +104,48 @@ func DecodeHandshake(payload []byte) (Handshake, error) {
 	//		according to the version field.
 
 	switch version {
+	case 9:
+		return decodeHandshakeV9(payload)
 	case 10:
 		return decodeHandshakeV10(payload)
-
 	default:
 		return nil, fmt.Errorf("%w: unsupported protocol version or not a mysql handshake", ErrHandshakeDecode)
 	}
+}
+
+// Decode v9 of the MySQL handshake payload.
+func decodeHandshakeV9(payload []byte) (*HandshakeV9, error) {
+	// Start decoding after the first byte, since the first byte contains
+	// the version which has already been processed.
+
+	hs := &HandshakeV9{}
+
+	// Variable: Server Version (NULL-Terminated)
+
+	sub, pos, err := readBuffer(payload, 1, nullTermStringLen(payload[1:]))
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.ServerVersion = string(sub)
+	pos++ // Add additional offset for null byte
+
+	// 4 Bytes: Thread ID
+
+	sub, pos, err = readBuffer(payload, pos, 4)
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.ThreadID = binary.LittleEndian.Uint32(sub)
+
+	// Variable: Scramble (NULL-Terminated)
+
+	sub, _, err = readBuffer(payload, pos, nullTermStringLen(payload[pos:]))
+	if err != nil {
+		return nil, ErrHandshakeTruncated
+	}
+	hs.Scramble = sub
+
+	return hs, nil
 }
 
 // Decode v10 of the MySQL handshake payload.

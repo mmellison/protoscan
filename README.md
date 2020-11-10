@@ -51,7 +51,7 @@ ProtoScan currently supports the following protocols and versions:
 Supports reporting information from a MySQL Protocol handshake.
 Supported protocol versions:
 - v10
-- v9 (In Progress)
+- v9
 
 Example report:
 
